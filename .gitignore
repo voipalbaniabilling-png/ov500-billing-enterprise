@@ -1,0 +1,46 @@
+# Secrets and runtime configuration
+.env
+.env.*
+!.env.example
+config/runtime.php
+**/runtime.php
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.secret
+*token*
+*credential*
+
+# Backups, databases, logs and call data
+*.sql
+*.sql.gz
+*.dump
+*.bak
+*.backup
+*.log
+*.cdr
+*.pcap
+*.wav
+*.mp3
+*.tar.gz
+*.tgz
+release-*.json
+install-private.json
+ov500-install.json
+backup/
+backups/
+logs/
+
+# Local/runtime artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.cache/
+tmp/
+temp/
+__pycache__/
+*.py[cod]
