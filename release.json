@@ -1,8 +1,8 @@
 {
-  "sha256": "5ea1271a92a743baa84050ba0e03a8beb4cdb8a0663c3c5e21bd116b310cd24d",
+  "sha256": "1b1fc9360317044de8af16a413180acb0dc8445ee24b4f7f4e1f2a9fd8a6daa2",
   "github_release": {
     "repository": "voipalbaniabilling-png/ov500-billing-enterprise",
-    "tag": "v1.0.0",
+    "tag": "v1.0.1",
     "asset": "voipalbania-billing-go-ubuntu24-amd64.tar.gz",
     "signature_asset": "voipalbania-billing-go-ubuntu24-amd64.tar.gz.sig"
   },
