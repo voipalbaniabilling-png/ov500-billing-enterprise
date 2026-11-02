@@ -1,10 +1,11 @@
-copy(JSON.stringify({url:location.href,editor:!!document.querySelector(".cm-content"),own:Object.getOwnPropertyNames(document.querySelector(".cm-content")||{})}))
-"sha256": "b6a68e8697f2e20d42e914946dd3b5537176d0dbdec64da5bf2a84f31f9d9aec",
-  "product": "VOIPALBANIA Billing Enterprise + GO",
-  "platform": "ubuntu:24.04:amd64",
+{
+  "sha256": "6d41f5461d8de9317921965313e461d7e6d49ab78adb55934b45d34941245c38",
   "github_release": {
     "repository": "voipalbaniabilling-png/ov500-billing-enterprise",
     "tag": "v1.0.6",
     "asset": "voipalbania-billing-go-ubuntu24-amd64.tar.gz",
     "signature_asset": "voipalbania-billing-go-ubuntu24-amd64.tar.gz.sig"
   },
+  "product": "VOIPALBANIA Billing Enterprise + GO",
+  "platform": "ubuntu:24.04:amd64"
+}
