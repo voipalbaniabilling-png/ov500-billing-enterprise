@@ -1,6 +1,6 @@
-# VOIPALBANIA OV500 Billing
+# VOIPALBANIA OV500 — VoIP Billing for FreeSWITCH
 
-OV500 Billing is a telecommunications billing and operations platform for service providers using FreeSWITCH. It brings customer and reseller accounts, carrier management, rating, routing, invoices, CDR reporting, and multi-server FreeSWITCH administration together in one web panel.
+VOIPALBANIA OV500 is a VoIP billing and telecom operations platform for service providers using FreeSWITCH. It brings real-time billing, prepaid and postpaid customer accounts, reseller billing, carrier management, SIP call routing, multi-currency billing, invoices and CDR reporting together in one web panel. Its FS Manager administers multiple remote FreeSWITCH servers with dedicated Go engines.
 
 The platform is designed to manage more than one remote FreeSWITCH server from the same Billing installation. Billing remains the control and financial system; FreeSWITCH handles SIP call processing. See [FEATURES.md](FEATURES.md) for the detailed feature overview.
 
