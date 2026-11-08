@@ -25,10 +25,10 @@ def digest(path):
   for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
  return h.hexdigest()
 
-def fetch(url,target):
+def fetch(url,target,headers=None):
  public_https(url)
  opener=urllib.request.build_opener(HTTPSRedirect(),urllib.request.HTTPSHandler(context=ssl.create_default_context()))
- request=urllib.request.Request(url,headers={'User-Agent':'VOIPALBANIA-Installer/1.0'})
+ request=urllib.request.Request(url,headers={'User-Agent':'VOIPALBANIA-Installer/1.0',**(headers or {})})
  try:
   with opener.open(request,timeout=120) as response,target.open('xb') as output:
    public_https(response.url);total=0
@@ -53,6 +53,37 @@ def release_url(meta, asset_override=None):
  if not isinstance(asset,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]{0,254}',asset) or asset in ('.','..'):raise ValueError('Set github_release.asset to a plain release filename')
  url='https://github.com/'+repo+'/releases/download/'+urllib.parse.quote(tag,safe='')+'/'+urllib.parse.quote(asset,safe='')
  return public_https(url)
+
+def fetch_release_asset(meta,asset,target):
+ """Use the same pinned release through the public API if its download route fails."""
+ url=release_url(meta,asset)
+ try:
+  fetch(url,target)
+  return
+ except RuntimeError:
+  # target is a uniquely owned file in this installer's private run directory.
+  target.unlink(missing_ok=True)
+ gh=meta['github_release'];repo=gh['repository'];tag=gh['tag']
+ endpoint='https://api.github.com/repos/'+repo+'/releases/tags/'+urllib.parse.quote(tag,safe='')
+ opener=urllib.request.build_opener(HTTPSRedirect(),urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+ request=urllib.request.Request(endpoint,headers={'User-Agent':'VOIPALBANIA-Installer/1.0','Accept':'application/vnd.github+json'})
+ try:
+  with opener.open(request,timeout=120) as response:
+   public_https(response.url);raw=response.read(1024*1024+1)
+  if len(raw)>1024*1024:raise ValueError('Release metadata exceeds allowance')
+  release=json.loads(raw)
+  if release.get('tag_name')!=tag or release.get('draft'):
+   raise ValueError('Pinned release metadata mismatch')
+  matches=[a for a in release.get('assets',[]) if a.get('name')==asset and a.get('state')=='uploaded']
+  if len(matches)!=1:raise ValueError('Pinned release asset missing or ambiguous')
+  entry=matches[0];asset_id=entry.get('id');size=entry.get('size')
+  if type(asset_id)is not int or asset_id<=0 or type(size)is not int or not 0<size<=MAX_DOWNLOAD:
+   raise ValueError('Invalid pinned release asset metadata')
+  print('Standard release download unavailable; retrying the same pinned asset through GitHub API.',flush=True)
+  fetch('https://api.github.com/repos/'+repo+'/releases/assets/'+str(asset_id),target,{'Accept':'application/octet-stream'})
+  if target.stat().st_size!=size:raise ValueError('Release asset size mismatch')
+ except ValueError:raise
+ except Exception:raise RuntimeError('Pinned release download unavailable through both GitHub routes') from None
 
 def verify_signature(archive,signature,public_key=PINNED_PUBLISHER_KEY):
  archive=pathlib.Path(archive);signature=pathlib.Path(signature)
@@ -141,8 +172,8 @@ def main():
   signature_asset=meta.get('github_release',{}).get('signature_asset','')
   if not isinstance(signature_asset,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]{0,254}',signature_asset) or signature_asset in ('.','..') or signature_asset==meta.get('github_release',{}).get('asset'):
    raise ValueError('Set github_release.signature_asset to a separate detached signature filename')
-  fetch(url,archive)
-  signature=run/'release.sig';fetch(release_url(meta,signature_asset),signature)
+  fetch_release_asset(meta,meta['github_release']['asset'],archive)
+  signature=run/'release.sig';fetch_release_asset(meta,signature_asset,signature)
  verify_signature(archive,signature)
  if digest(archive)!=sha:raise ValueError('Downloaded release SHA256 mismatch; installer was not executed')
  root,count=unpack(archive,run)
