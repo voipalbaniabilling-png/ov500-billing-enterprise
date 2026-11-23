@@ -1,16 +1,16 @@
 {
-  "sha256": "9317995c7e2b427ed14f39701ea0f7bf24ef797f6e048df0a03db0fbea1952bf",
+  "sha256": "2fce078f28f2f5f5a0adb9ea39b43de79ab6f111df3d09bfcca1824f401d3a4e",
   "product": "VOIPALBANIA Billing Enterprise + GO",
   "platform": "ubuntu:24.04:amd64",
   "github_release": {
     "repository": "voipalbaniabilling-png/ov500-billing-enterprise",
-    "tag": "v1.0.37-r54",
+    "tag": "v1.0.38-r55",
     "asset": "voipalbania-billing-go-ubuntu24-amd64.tar.gz",
     "signature_asset": "voipalbania-billing-go-ubuntu24-amd64.tar.gz.sig"
   },
-  "protected_version": "r54-20261121",
+  "protected_version": "r55-20261123",
   "published": true,
-  "release_version": "1.0.37",
-  "published_git_release": "https://github.com/voipalbaniabilling-png/ov500-billing-enterprise/releases/tag/v1.0.37-r54",
-  "public_git_tag": "v1.0.37-r54"
+  "release_version": "1.0.38",
+  "published_git_release": "https://github.com/voipalbaniabilling-png/ov500-billing-enterprise/releases/tag/v1.0.38-r55",
+  "public_git_tag": "v1.0.38-r55"
 }
