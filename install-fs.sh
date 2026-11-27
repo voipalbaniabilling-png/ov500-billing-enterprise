@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+# FreeSWITCH 1.11.4 / Sofia-SIP 1.13.19; pinned official sources.
 # OV500 FreeSWITCH bootstrap for a NEW Debian 12 host. No Billing credentials embedded.
 set -Eeuo pipefail
 umask 027
-FS_COMMIT=ef32e205295e29f034f1453ad245ba5efb07b94a
-SOFIA_COMMIT=ad36ac8f755308e8b87f98a505e83d4e408e5cc3
+FS_COMMIT=795228ad43ecc8ebd679d15fc189e66de94c252a
+SOFIA_COMMIT=6dce59d35535e6dd3945c7b0f76dbf1ba884202d
 SPAN_COMMIT=8f1e1646bdec99eac5fd2cd92c35563f736b9b89
 PREFIX=/usr/local/freeswitch
 STATE=/var/lib/ov500-fs-install
