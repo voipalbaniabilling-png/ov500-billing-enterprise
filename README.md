@@ -18,20 +18,48 @@ To request a free trial, email [voipalbaniabilling@gmail.com](mailto:voipalbania
 
 Applicants do not access the VOIPALBANIA licensing panel. Do not email administrator passwords, SIP secrets, SSH credentials, API tokens, private keys, or an existing activation key. The license administrator issues the trial key; the applicant enters it in their own Billing license page.
 
-## Installation from Git
+## Automatic installation — Ubuntu Server 24.04 amd64
 
-The Git repository is intended to contain the small installer/bootstrap and documentation. During installation, the bootstrap downloads the complete protected Billing + GO package and its detached Ed25519 signature from a pinned GitHub Release asset. It checks the publisher signature, the configured SHA-256 digest, and the package manifest before handing the verified package to its native installer. OpenSSL is required for signature verification; Python 3 and trusted CA certificates are required for HTTPS downloads.
+The complete Billing + GO system installs from a single executable `install.sh`. Run it in a **root terminal** on a clean Ubuntu Server24.04amd64 machine. No JSON file, domain, email, certificate, username or password needs to be entered during installation.
 
-The release metadata in `release.json` must identify the actual public `OWNER/REPOSITORY`, immutable release tag, asset filename, matching SHA-256, and signature filename before the public installer can download a release. Those values must refer to the exact package and signature approved for publication. Do not replace the pinned public verification key to work around a failed signature. Never publish the signing private key. The installer is not ready for public installation until the signed release assets and this metadata have been verified together.
+If the executable script has already been downloaded:
 
-The native installer is designed for a clean Ubuntu 24.04 amd64 host with PHP 7.4 compatibility. It generates fresh installation credentials and application secrets; it must not copy runtime credentials, customer records, or deployment configuration from another Billing installation. SMTP, payment services, DNS/TLS, license activation, and remote FreeSWITCH access still require owner-supplied configuration and acceptance.
+```bash
+./install.sh
+```
 
-A separate Debian 12 installer is maintained for FreeSWITCH servers. Its script is not included in this Git repository yet; it is planned for a later publication after separate review. FreeSWITCH installation and Billing installation are separate steps, and the FreeSWITCH installer does not configure customer routes or authorize live traffic by itself.
+One-line download and execution (this also sets the executable permission Linux requires for a downloaded file):
 
-## Release status
+```bash
+wget -q https://raw.githubusercontent.com/voipalbaniabilling-png/ov500-billing-enterprise/main/install.sh -O install.sh && chmod 700 install.sh && ./install.sh
+```
 
-This repository is being prepared as the public project and installation entry point. A protected package is still a private candidate; do not treat this repository as an approved production installer until an exact release has passed its release gates, signing-key custody is established, the matching signed release assets are published, and `release.json` points to those exact assets. Third-party components remain subject to their respective licenses and notices.
+The script downloads its matching immutable bootstrap, the complete protected package and signature; verifies Ed25519, SHA256 and the full manifest; installs dependencies, database, panel, GO components and scheduled services; then runs the native installation checks. It discovers the new server's network address and timezone. Existing resource planning uses the target machine's CPU/RAM/cgroup/database limits and storage budgets; it does not copy another server's capacity settings.
+
+At completion, the terminal displays **Panel URL, Administrator username and Administrator password**. The panel initially opens by the detected local IP with HTTPS on443; port80 redirects browser traffic while preserving the native API and ACME paths. No8080 or SSH tunnel is required. The initial IP certificate is generated locally and is self-signed; a browser may require accepting it. Configure company details, domain and free public SSL later from the panel. The installer automatically prepares that Domain & SSL service.
+
+Every installation generates new administrator/database credentials and encryption keys. No customer/carrier records, CDRs, invoices, balances, sessions, working-company settings or source-server credentials are included. Keep the final credential receipt private. License activation, company details, SMTP and remote FreeSWITCH connections are configured through the web after installation; they are not interactive installer questions.
+
+The installer refuses existing/partial deployments instead of erasing databases or replacing another system. It needs root privileges and working access to Ubuntu/PHP/GitHub repositories. Downloaded files must have executable permission; Git clones preserve the script's executable mode. A normal OS permission or external network/package failure cannot be bypassed by the installer.
+
+### Verification only
+
+```bash
+./install.sh --prepare
+```
+
+This downloads and verifies without installing services or databases. It is not a full installation. Manual `--config` is an optional advanced mode, not required for the normal automatic installation.
+
+### Current release and test scope
+
+Panel version **v1.0.39**, corrected automatic installer **r57**. Signed packages, full manifests, installer plans, native financial/CDR regressions, automatic configuration/credential handoff and isolated HTTP/HTTPS tests are verified. The matching release notes record full-installation acceptance and remaining limitations. Only the approved Latest release is recommended for installation.
+
+FreeSWITCH is installed separately on its own Debian12server with `install-fs.sh`; Billing installation does not change an existing FreeSWITCH server or admit traffic by itself.
 
 ## Security and privacy
 
 Never publish customer information, CDRs, live server addresses, runtime configuration, credentials, private signing keys, or protected package contents in public issues or pull requests. Report security concerns privately using the trial/contact email above.
+
+### Ubuntu automatic updates
+
+Fresh installation configures unattended updates for Ubuntu security repositories only (including ESM security when enabled). Regular package updates and Ubuntu release upgrades remain manual. Automatic reboot is disabled; a kernel security update may require a planned reboot. Third-party repositories are not automatically trusted as security sources.

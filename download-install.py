@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Download a pinned Billing release; prepare privately before the native installer runs."""
-import argparse,hashlib,json,os,pathlib,re,shutil,ssl,stat,subprocess,sys,tarfile,tempfile,urllib.parse,urllib.request
+import ipaddress,platform,socket,zoneinfo,argparse,hashlib,json,os,pathlib,re,shutil,ssl,stat,subprocess,sys,tarfile,tempfile,urllib.parse,urllib.request
 HERE=pathlib.Path(__file__).resolve().parent
 MAX_DOWNLOAD=2*1024**3
 MAX_EXPANDED=8*1024**3
@@ -140,20 +140,93 @@ def unpack(archive,destination):
  if not (root/'install.py').is_file():raise ValueError('Missing native installer')
  return root,len(expected)
 
+def automatic_preflight():
+ if os.geteuid()!=0:raise ValueError('Run with sudo: sudo bash install.sh')
+ release=dict(line.split('=',1)for line in pathlib.Path('/etc/os-release').read_text().splitlines()if'='in line)
+ if release.get('ID','').strip('"')!='ubuntu'or release.get('VERSION_ID','').strip('"')!='24.04':raise ValueError('Automatic installation requires Ubuntu24.04 amd64')
+ if platform.machine()!='x86_64':raise ValueError('Automatic installation requires amd64')
+ root=pathlib.Path('/opt/ov500')
+ if root.is_symlink()or root.exists()and any(root.iterdir()):raise ValueError('Existing installation or nonempty destination; no data was overwritten')
+ for path in ['/etc/systemd/system/ov500-go@.service','/etc/ov500/jobs.conf','/etc/apache2/sites-available/ov500.conf','/usr/local/libexec/ov500-fs-engine','/etc/ov500/bootstrap-tls']:
+  if pathlib.Path(path).exists():raise ValueError('Existing OV500 installation detected; preserve it and its diagnostics')
+ for port in [80,443]:
+  probe=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+  try:probe.bind(('0.0.0.0',port))
+  except OSError:raise ValueError('Web port'+str(port)+' is already in use; no existing service was changed') from None
+  finally:probe.close()
+
+def automatic_address():
+ def rows(args):
+  p=subprocess.run(['ip','-j','-4']+args,capture_output=True,text=True)
+  if p.returncode:raise ValueError('Unable to discover the server network address')
+  return json.loads(p.stdout)
+ def usable(value):
+  try:a=ipaddress.IPv4Address(value);return not(a.is_loopback or a.is_link_local or a.is_multicast or a.is_unspecified or a.is_reserved)
+  except ValueError:return False
+ routes=sorted(rows(['route','show','default']),key=lambda r:int(r.get('metric',0)))
+ interfaces=rows(['address','show','scope','global']);bydev={r['ifname']:r for r in interfaces}
+ for route in routes:
+  if route.get('dev') not in bydev:continue
+  candidates=[x.get('local','')for x in bydev[route['dev']].get('addr_info',[])if x.get('scope')=='global'and usable(x.get('local',''))]
+  preferred=route.get('prefsrc')
+  if preferred in candidates:return preferred
+  if candidates:return candidates[0]
+ candidates=list(dict.fromkeys(x.get('local','')for r in interfaces for x in r.get('addr_info',[])if x.get('scope')=='global'and usable(x.get('local',''))))
+ if len(candidates)==1:return candidates[0]
+ raise ValueError('No unambiguous server address found; no address was guessed')
+
+def automatic_config(run):
+ address=automatic_address();zone='UTC'
+ candidate=pathlib.Path('/etc/timezone')
+ if candidate.is_file():zone=candidate.read_text().strip()
+ else:
+  p=subprocess.run(['timedatectl','show','-p','Timezone','--value'],capture_output=True,text=True)
+  if p.returncode==0 and p.stdout.strip():zone=p.stdout.strip()
+ # Resolve host IANA aliases before persisting the panel reporting zone.
+ aliases={}
+ tzdata=pathlib.Path('/usr/share/zoneinfo/tzdata.zi')
+ if tzdata.is_file():
+  for line in tzdata.read_text().splitlines():
+   fields=line.split()
+   if len(fields)>=3 and fields[0] in ('L','Link'):aliases[fields[2]]=fields[1]
+ seen=set()
+ while zone in aliases and zone not in seen:
+  seen.add(zone);zone=aliases[zone]
+ if zone=='Etc/UTC':zone='UTC'
+ try:zoneinfo.ZoneInfo(zone)
+ except (ValueError,zoneinfo.ZoneInfoNotFoundError):raise ValueError('Server timezone is unavailable or invalid') from None
+ config={'root':'/opt/ov500','base_url':'https://'+address,'http_port':443,'timezone':zone,'admin_email':'admin@billing.invalid','company':'VOIPALBANIA Billing'}
+ tls=pathlib.Path('/etc/ov500/bootstrap-tls');tls.mkdir(parents=True,mode=0o700,exist_ok=False)
+ cert=tls/'certificate.pem';key=tls/'private-key.pem'
+ p=subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-sha256','-nodes','-days','365','-subj','/CN='+address,'-addext','subjectAltName=IP:'+address,'-keyout',str(key),'-out',str(cert)],capture_output=True,text=True)
+ if p.returncode:raise RuntimeError('Unable to create initial HTTPS certificate; preserve installer diagnostics')
+ key.chmod(0o600);cert.chmod(0o644);config.update(tls_certificate=str(cert),tls_key=str(key))
+ target=run/'automatic-install.json';fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+ with os.fdopen(fd,'w')as f:json.dump(config,f)
+ print('Automatic clean installation: '+config['base_url']+'. Configure company details, domain and public SSL later in the web panel.',flush=True)
+ return target
+
 def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('--release',default=str(HERE/'release.json'),help='Pinned GitHub Release metadata and SHA256')
  ap.add_argument('--archive',help='Use an already downloaded package, with the same pinned SHA256')
+ ap.add_argument('--automatic',action='store_true',help='Unattended clean installation; discover target configuration and generate new credentials')
  ap.add_argument('--config',help='Native root-owned mode0600 installation JSON')
  ap.add_argument('--work-dir',default='/var/lib/voipalbania-installer')
  action=ap.add_mutually_exclusive_group();action.add_argument('--prepare',action='store_true',help='Verify/extract only; do not install services or databases');action.add_argument('--apply',action='store_true');action.add_argument('--verify',action='store_true')
  ap.add_argument('--signature',help='Detached Ed25519 signature for a local --archive (defaults to ARCHIVE.sig)')
  ap.add_argument('--defer-services',action='store_true',help='Prepare an isolated/offline install without claiming systemd activation')
  a=ap.parse_args();os.umask(0o077)
+ if a.automatic:
+  if a.config or a.prepare or a.verify:ap.error('--automatic cannot be combined with config/prepare/verify')
+  a.apply=True;automatic_preflight()
  if a.defer_services and not a.apply:ap.error('--defer-services requires --apply')
- if not a.prepare and not a.config:ap.error('--config is required for plan/apply/verify; use --prepare to validate the package only')
+ if not a.prepare and not a.config and not a.automatic:ap.error('--config is required for plan/apply/verify; use --prepare to validate the package only')
  if a.apply and os.geteuid()!=0:raise ValueError('Root required to install')
  meta=json.loads(pathlib.Path(a.release).read_text());sha=meta.get('sha256','')
+ if not a.archive and (HERE/'SETUP.json').is_file():
+  local=json.loads((HERE/'SETUP.json').read_text());name=pathlib.Path(local.get('archive','')).name
+  if local.get('sha256')==sha and name.endswith('.tar.gz') and (HERE/name).is_file():a.archive=str(HERE/name)
  if not isinstance(sha,str) or not re.fullmatch('[0-9a-f]{64}',sha):raise ValueError('A trusted release SHA256 is required')
  if a.signature and not a.archive:ap.error('--signature is only valid with --archive')
  url=release_url(meta) if not a.archive else None
@@ -178,6 +251,7 @@ def main():
  if digest(archive)!=sha:raise ValueError('Downloaded release SHA256 mismatch; installer was not executed')
  root,count=unpack(archive,run)
  if a.prepare:print(json.dumps({'status':'prepared','files_verified':count,'release':str(root),'sha256':sha}));return
+ if a.automatic:a.config=str(automatic_config(run))
  command=[sys.executable,str(root/'install.py'),'--config',str(pathlib.Path(a.config).resolve())]
  if a.apply:command.append('--apply')
  if a.verify:command.append('--verify')
