@@ -20,7 +20,7 @@ Applicants do not access the VOIPALBANIA licensing panel. Do not email administr
 
 ## Automatic installation — Ubuntu Server 24.04 amd64
 
-The complete Billing + GO system installs from a single executable `install.sh`. Run it in a **root terminal** on a clean Ubuntu Server24.04amd64 machine. No JSON file, domain, email, certificate, username or password needs to be entered during installation.
+The complete Billing + GO system installs from a single executable `install.sh`. Run it in a **root terminal** on a clean Ubuntu Server 24.04 amd64 machine. No JSON file, domain, email, certificate, username or password needs to be entered during installation.
 
 If the executable script has already been downloaded:
 
@@ -31,30 +31,22 @@ If the executable script has already been downloaded:
 One-line download and execution (this also sets the executable permission Linux requires for a downloaded file):
 
 ```bash
-wget -q https://raw.githubusercontent.com/voipalbaniabilling-png/ov500-billing-enterprise/main/install.sh -O install.sh && chmod 700 install.sh && ./install.sh
+wget -q https://raw.githubusercontent.com/voipalbaniabilling-png/ov500-billing-enterprise/main/install.sh -O install.sh && chmod +x install.sh && sudo ./install.sh
 ```
 
 The script downloads its matching immutable bootstrap, the complete protected package and signature; verifies Ed25519, SHA256 and the full manifest; installs dependencies, database, panel, GO components and scheduled services; then runs the native installation checks. It discovers the new server's network address and timezone. Existing resource planning uses the target machine's CPU/RAM/cgroup/database limits and storage budgets; it does not copy another server's capacity settings.
 
-At completion, the terminal displays **Panel URL, Administrator username and Administrator password**. The panel initially opens by the detected local IP with HTTPS on443; port80 redirects browser traffic while preserving the native API and ACME paths. No8080 or SSH tunnel is required. The initial IP certificate is generated locally and is self-signed; a browser may require accepting it. Configure company details, domain and free public SSL later from the panel. The installer automatically prepares that Domain & SSL service.
+At completion, the terminal displays **Panel URL, Administrator username and Administrator password**. The panel initially opens by the detected local IP with HTTPS on 443; port 80 redirects browser traffic while preserving the native API and ACME paths. No port 8080 or SSH tunnel is required. The initial IP certificate is generated locally and is self-signed; a browser may require accepting it. Configure company details, domain and free public SSL later from the panel. The installer automatically prepares that Domain & SSL service.
 
 Every installation generates new administrator/database credentials and encryption keys. No customer/carrier records, CDRs, invoices, balances, sessions, working-company settings or source-server credentials are included. Keep the final credential receipt private. License activation, company details, SMTP and remote FreeSWITCH connections are configured through the web after installation; they are not interactive installer questions.
 
 The installer refuses existing/partial deployments instead of erasing databases or replacing another system. It needs root privileges and working access to Ubuntu/PHP/GitHub repositories. Downloaded files must have executable permission; Git clones preserve the script's executable mode. A normal OS permission or external network/package failure cannot be bypassed by the installer.
 
-### Verification only
-
-```bash
-./install.sh --prepare
-```
-
-This downloads and verifies without installing services or databases. It is not a full installation. Manual `--config` is an optional advanced mode, not required for the normal automatic installation.
-
 ### Current release and test scope
 
 Panel version **v1.0.39**, corrected automatic installer **r57**. Signed packages, full manifests, installer plans, native financial/CDR regressions, automatic configuration/credential handoff and isolated HTTP/HTTPS tests are verified. The matching release notes record full-installation acceptance and remaining limitations. Only the approved Latest release is recommended for installation.
 
-FreeSWITCH is installed separately on its own Debian12server with `install-fs.sh`; Billing installation does not change an existing FreeSWITCH server or admit traffic by itself.
+FreeSWITCH is installed separately on its own Debian 12 server with `install-fs.sh`; Billing installation does not change an existing FreeSWITCH server or admit traffic by itself.
 
 ## Security and privacy
 
